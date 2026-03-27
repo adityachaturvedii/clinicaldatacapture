@@ -170,7 +170,7 @@ const normalizeRegisterPayload = (body: unknown): RegisterPatientPayload | null 
 };
 
 // Station 1: Submit initial form
-app.post('/api/register', (req, res) => {
+app.post('/api/register', async (req, res) => {
   const auth = extractStationAuthFromHeaders(req);
   if (!auth || !isValidStation(auth.stationNumber, 1)) {
     res.status(403).json({ message: 'Station 1 with operator name is required.' });
@@ -212,18 +212,18 @@ app.post('/api/register', (req, res) => {
     },
   });
 
-  // Sync to Google Sheets patients tab
-  void syncPatientRegistration(patient)
-    .then((synced: boolean) => {
-      if (synced) {
-        markPatientSynced(patient.tempId, patient.visitDate);
-      }
-    })
-    .catch(() => {
-      // Intentionally swallow sync errors to avoid impacting station flow.
-    });
+  // Sync to Google Sheets patients tab and wait for result
+  let sheetSynced = false;
+  try {
+    sheetSynced = await syncPatientRegistration(patient);
+    if (sheetSynced) {
+      markPatientSynced(patient.tempId, patient.visitDate);
+    }
+  } catch {
+    // Sync failed but local save succeeded
+  }
 
-  res.status(201).json(patient);
+  res.status(201).json({ ...patient, sheetSynced });
 });
 
 // Stations 2-6: Fetch patient by ID

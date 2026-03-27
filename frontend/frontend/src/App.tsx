@@ -227,12 +227,18 @@ export default function App() {
         maritalStatus: registerForm.maritalStatus.trim(),
         familyType: registerForm.familyType.trim(),
       };
-      const patient = await registerPatientFromStation(payload, auth);
-      hydratePatientState(patient);
-      setSearchId(patient.tempId);
-      setStatus(
-        `Patient registered. Temp ID: ${patient.tempId}. Stay on Station 1 and use Station 2 URL separately.`,
-      );
+      const result = await registerPatientFromStation(payload, auth) as PatientRecord & { sheetSynced?: boolean };
+      hydratePatientState(result);
+      setSearchId(result.tempId);
+      if (result.sheetSynced) {
+        setStatus(
+          `Success! Temp ID: ${result.tempId}, Name: ${result.name} has been successfully registered and synced to Google Sheets.`,
+        );
+      } else {
+        setStatus(
+          `Warning: Temp ID: ${result.tempId}, Name: ${result.name} registered locally but failed to sync to Google Sheets.`,
+        );
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Registration failed.';
       setStatus(message);
