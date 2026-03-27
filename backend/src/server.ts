@@ -324,6 +324,24 @@ app.get('/api/patients', (_req, res) => {
   res.status(200).json(getAllPatientsLocal());
 });
 
+// Cache for Google Sheets data (updated every 2 seconds by background job)
+let cachedSheetPatients: import('./shared-types.js').PatientRecord[] = [];
+let cacheLastUpdated = 0;
+
+const refreshSheetCache = async () => {
+  try {
+    const records = await fetchPatientsFromGoogleSheet();
+    cachedSheetPatients = records;
+    cacheLastUpdated = Date.now();
+    // Also save to local DB as backup
+    for (const record of records) {
+      savePatientLocal(record);
+    }
+  } catch {
+    // Keep using old cache on error
+  }
+};
+
 app.get('/api/patients/today', async (req, res) => {
   const auth = extractStationAuthFromHeaders(req);
   if (!auth || !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6])) {
@@ -331,15 +349,13 @@ app.get('/api/patients/today', async (req, res) => {
     return;
   }
 
-  // Google Sheets is the ground truth - always fetch from there first
-  const sheetRecords = await fetchPatientsFromGoogleSheet();
-  const today = new Date().toISOString().slice(0, 10);
-  const todayRecords = sheetRecords.filter((r) => r.visitDate === today);
-
-  // Save to local DB as backup
-  for (const record of sheetRecords) {
-    savePatientLocal(record);
+  // If cache is empty or stale (>5 seconds), refresh it
+  if (cachedSheetPatients.length === 0 || Date.now() - cacheLastUpdated > 5000) {
+    await refreshSheetCache();
   }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRecords = cachedSheetPatients.filter((r) => r.visitDate === today);
 
   res.status(200).json(todayRecords);
 });
@@ -422,14 +438,11 @@ const GOOGLE_PULL_INTERVAL_MS = Number(process.env.GOOGLE_PULL_INTERVAL_MS || 20
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 
-  setInterval(async () => {
-    const records = await fetchPatientsFromGoogleSheet();
-    if (records.length === 0) {
-      return;
-    }
+  // Initial cache load
+  void refreshSheetCache();
 
-    for (const record of records) {
-      savePatientLocal(record);
-    }
+  // Background job to keep cache updated
+  setInterval(() => {
+    void refreshSheetCache();
   }, GOOGLE_PULL_INTERVAL_MS);
 });
