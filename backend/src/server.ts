@@ -19,7 +19,8 @@ import {
 import {
   fetchPatientsFromGoogleSheet,
   getGoogleSheetsConfigStatus,
-  syncPatientToGoogleSheet,
+  syncPatientRegistration,
+  syncStationData,
   syncPendingPatientsToGoogleSheets,
 } from './googleSheets.js';
 
@@ -211,9 +212,9 @@ app.post('/api/register', (req, res) => {
     },
   });
 
-  // Best effort; local DB remains source of truth.
-  void syncPatientToGoogleSheet(patient)
-    .then((synced) => {
+  // Sync to Google Sheets patients tab
+  void syncPatientRegistration(patient)
+    .then((synced: boolean) => {
       if (synced) {
         markPatientSynced(patient.tempId, patient.visitDate);
       }
@@ -285,8 +286,9 @@ app.put('/api/patient/:id/station/:station', (req, res) => {
     },
   });
 
-  void syncPatientToGoogleSheet(updated)
-    .then((synced) => {
+  // Sync to station-specific tab in Google Sheets
+  void syncStationData(updated, station)
+    .then((synced: boolean) => {
       if (synced) {
         markPatientSynced(updated.tempId, updated.visitDate);
       }
