@@ -62,9 +62,6 @@ export default function App() {
   const [status, setStatus] = useState('Ready');
   const [searchId, setSearchId] = useState('');
   const [stationOperatorName, setStationOperatorName] = useState('');
-  const [stationOperatorId, setStationOperatorId] = useState('');
-  const [stationPassword, setStationPassword] = useState('');
-  const [credentialsSaved, setCredentialsSaved] = useState(false);
   const [stationAuthorized, setStationAuthorized] = useState(false);
   const [currentPatient, setCurrentPatient] = useState<PatientRecord | null>(null);
   const [incomingPatients, setIncomingPatients] = useState<IncomingPatientOption[]>([]);
@@ -98,16 +95,9 @@ export default function App() {
 
   useEffect(() => {
     const nameKey = `station-operator-name-${activeStation}`;
-    const idKey = `station-id-${activeStation}`;
-    const passwordKey = `station-password-${activeStation}`;
     const storedOperatorName = window.localStorage.getItem(nameKey) || '';
-    const storedOperatorId = window.localStorage.getItem(idKey) || '';
-    const storedPassword = window.localStorage.getItem(passwordKey) || '';
 
     setStationOperatorName(storedOperatorName);
-    setStationOperatorId(storedOperatorId);
-    setStationPassword(storedPassword);
-    setCredentialsSaved(Boolean(storedOperatorName && storedOperatorId && storedPassword));
     setStationAuthorized(false);
     setSearchId('');
     setCurrentPatient(null);
@@ -124,40 +114,33 @@ export default function App() {
   };
 
   const getStationAuth = (): StationAuth | null => {
-    const normalizedOperatorId = stationOperatorId.trim();
-    const normalizedPassword = stationPassword.trim();
+    const normalizedOperatorName = stationOperatorName.trim();
 
-    if (!normalizedOperatorId || !normalizedPassword) {
+    if (!normalizedOperatorName) {
       return null;
     }
 
     return {
       stationNumber: activeStation,
-      operatorId: normalizedOperatorId,
-      password: normalizedPassword,
+      operatorName: normalizedOperatorName,
     };
   };
 
   const handleStationLogin = async () => {
     const auth = getStationAuth();
-    if (!stationOperatorName.trim()) {
-      setStationAuthorized(false);
-      setStatus('Operator name is required.');
-      return;
-    }
-
     if (!auth) {
       setStationAuthorized(false);
-      setStatus('Station ID and password are required.');
+      setStatus('Operator name is required.');
       return;
     }
 
     try {
       await verifyStationAccess(auth);
       setStationAuthorized(true);
-      setStatus(`Station ${activeStation} login successful.`);
+      window.localStorage.setItem(`station-operator-name-${activeStation}`, auth.operatorName);
+      setStatus(`Station ${activeStation} login successful. Welcome, ${auth.operatorName}!`);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Invalid station credentials.';
+      const message = error instanceof Error ? error.message : 'Login failed.';
       setStationAuthorized(false);
       setIncomingPatients([]);
       setCurrentPatient(null);
@@ -221,14 +204,14 @@ export default function App() {
     return () => {
       clearInterval(intervalId);
     };
-  }, [activeStation, stationOperatorId, stationPassword, stationAuthorized]);
+  }, [activeStation, stationOperatorName, stationAuthorized]);
 
   const handleRegister = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     const auth = getStationAuth();
     if (!stationAuthorized || !auth || auth.stationNumber !== 1) {
-      setStatus('Login to Station 1 with valid ID/password first.');
+      setStatus('Login to Station 1 first.');
       return;
     }
 
@@ -270,7 +253,7 @@ export default function App() {
 
     const auth = getStationAuth();
     if (!stationAuthorized || !auth) {
-      setStatus(`Login to Station ${activeStation} with valid ID/password first.`);
+      setStatus(`Login to Station ${activeStation} first.`);
       return;
     }
 
@@ -448,60 +431,12 @@ export default function App() {
               value={stationOperatorName}
               onChange={(event) => {
                 setStationOperatorName(event.target.value);
-                setCredentialsSaved(false);
                 setStationAuthorized(false);
               }}
               placeholder={`Station ${activeStation} Operator Name`}
               className="field-pin"
             />
-            <input
-              value={stationOperatorId}
-              onChange={(event) => {
-                setStationOperatorId(event.target.value);
-                setCredentialsSaved(false);
-                setStationAuthorized(false);
-              }}
-              placeholder={`Station ${activeStation} ID`}
-              className="field-pin"
-            />
-            <input
-              type="password"
-              value={stationPassword}
-              onChange={(event) => {
-                setStationPassword(event.target.value);
-                setCredentialsSaved(false);
-                setStationAuthorized(false);
-              }}
-              placeholder={`Station ${activeStation} Password`}
-              className="field-pin"
-            />
-            <button
-              onClick={() => {
-                const normalizedOperatorName = stationOperatorName.trim();
-                const normalizedOperatorId = stationOperatorId.trim();
-                const normalizedPassword = stationPassword.trim();
-
-                if (!normalizedOperatorName || !normalizedOperatorId || !normalizedPassword) {
-                  setStatus('Enter operator name, station ID, and password first.');
-                  return;
-                }
-
-                window.localStorage.setItem(
-                  `station-operator-name-${activeStation}`,
-                  normalizedOperatorName,
-                );
-                window.localStorage.setItem(`station-id-${activeStation}`, normalizedOperatorId);
-                window.localStorage.setItem(`station-password-${activeStation}`, normalizedPassword);
-                setCredentialsSaved(true);
-                setStatus(`Station ${activeStation} credentials saved for this browser.`);
-              }}
-            >
-              Save Credentials
-            </button>
             <button onClick={() => void handleStationLogin()}>Login Station</button>
-            <span className={`pin-state ${credentialsSaved ? 'saved' : 'unsaved'}`}>
-              {credentialsSaved ? 'Credentials saved' : 'Credentials not saved'}
-            </span>
             <span className={`pin-state ${stationAuthorized ? 'saved' : 'unsaved'}`}>
               {stationAuthorized ? 'Logged in' : 'Not logged in'}
             </span>
@@ -720,8 +655,7 @@ export default function App() {
         {!stationAuthorized && (
           <StationWrapper title={`Station ${activeStation}: Access Required`}>
             <p className="muted">
-              Enter operator name, Station {activeStation} ID, and password, then click Login
-              Station to open this station.
+              Enter your operator name and click Login Station to access Station {activeStation}.
             </p>
           </StationWrapper>
         )}

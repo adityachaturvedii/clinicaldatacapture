@@ -9,8 +9,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
 
 export type StationAuth = {
 	stationNumber: number;
-	operatorId: string;
-	password: string;
+	operatorName: string;
 };
 
 const request = async <T>(path: string, init?: RequestInit): Promise<T> => {
@@ -47,8 +46,7 @@ export const registerPatientFromStation = (
 		method: 'POST',
 		headers: {
 			'x-station-number': String(auth.stationNumber),
-			'x-station-id': auth.operatorId,
-			'x-station-password': auth.password,
+			'x-operator-name': auth.operatorName,
 		},
 		body: JSON.stringify(payload),
 	});
@@ -58,8 +56,7 @@ export const fetchPatientById = (id: string, auth: StationAuth): Promise<Patient
 	return request<PatientRecord>(`/api/patient/${encodeURIComponent(id)}`, {
 		headers: {
 			'x-station-number': String(auth.stationNumber),
-			'x-station-id': auth.operatorId,
-			'x-station-password': auth.password,
+			'x-operator-name': auth.operatorName,
 		},
 	});
 };
@@ -68,18 +65,16 @@ export const fetchTodayPatients = (auth: StationAuth): Promise<PatientRecord[]> 
 	return request<PatientRecord[]>('/api/patients/today', {
 		headers: {
 			'x-station-number': String(auth.stationNumber),
-			'x-station-id': auth.operatorId,
-			'x-station-password': auth.password,
+			'x-operator-name': auth.operatorName,
 		},
 	});
 };
 
-export const verifyStationAccess = (auth: StationAuth): Promise<{ ok: boolean; station: number }> => {
-	return request<{ ok: boolean; station: number }>('/api/station/auth-check', {
+export const verifyStationAccess = (auth: StationAuth): Promise<{ ok: boolean; station: number; operator: string }> => {
+	return request<{ ok: boolean; station: number; operator: string }>('/api/station/auth-check', {
 		headers: {
 			'x-station-number': String(auth.stationNumber),
-			'x-station-id': auth.operatorId,
-			'x-station-password': auth.password,
+			'x-operator-name': auth.operatorName,
 		},
 	});
 };
@@ -97,8 +92,7 @@ export const updateStation = <K extends StationKey>(
 			headers: auth
 				? {
 					'x-station-number': String(auth.stationNumber),
-					'x-station-id': auth.operatorId,
-					'x-station-password': auth.password,
+					'x-operator-name': auth.operatorName,
 				}
 				: undefined,
 			body: JSON.stringify(payload),
@@ -109,8 +103,7 @@ export const updateStation = <K extends StationKey>(
 export const openClinicEventsStream = (auth: StationAuth): EventSource => {
 	const params = new URLSearchParams({
 		station: String(auth.stationNumber),
-		operatorId: auth.operatorId,
-		password: auth.password,
+		operatorName: auth.operatorName,
 	});
 	return new EventSource(`${API_BASE}/api/events?${params.toString()}`);
 };

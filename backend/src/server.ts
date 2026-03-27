@@ -6,7 +6,6 @@ import {
   getDailyIdStatus,
   getAllPatientsLocal,
   getPatientById,
-  getPatientsForDate,
   getPendingSyncPatients,
   markPatientSynced,
   savePatientLocal,
@@ -27,38 +26,6 @@ import {
 const app = express();
 app.use(cors());
 app.use(express.json());
-
-type StationCredential = {
-  operatorId: string;
-  password: string;
-};
-
-const STATION_CREDENTIALS: Record<number, StationCredential> = {
-  1: {
-    operatorId: process.env.STATION_1_ID || 'station1',
-    password: process.env.STATION_1_PASSWORD || 'station1pass',
-  },
-  2: {
-    operatorId: process.env.STATION_2_ID || 'station2',
-    password: process.env.STATION_2_PASSWORD || 'station2pass',
-  },
-  3: {
-    operatorId: process.env.STATION_3_ID || 'station3',
-    password: process.env.STATION_3_PASSWORD || 'station3pass',
-  },
-  4: {
-    operatorId: process.env.STATION_4_ID || 'station4',
-    password: process.env.STATION_4_PASSWORD || 'station4pass',
-  },
-  5: {
-    operatorId: process.env.STATION_5_ID || 'station5',
-    password: process.env.STATION_5_PASSWORD || 'station5pass',
-  },
-  6: {
-    operatorId: process.env.STATION_6_ID || 'station6',
-    password: process.env.STATION_6_PASSWORD || 'station6pass',
-  },
-};
 
 const STATION_NUMBER_BY_KEY: Record<StationKey, number> = {
   fibroscan: 2,
@@ -91,11 +58,11 @@ const broadcastEvent = (event: ClinicEvent) => {
 };
 
 const VALID_STATIONS: StationKey[] = ['fibroscan', 'bca', 'video', 'retinal', 'blood'];
+const VALID_STATION_NUMBERS = [1, 2, 3, 4, 5, 6];
 
 type StationAuthInfo = {
   stationNumber: number;
-  operatorId: string;
-  password: string;
+  operatorName: string;
 };
 
 const parseStationNumber = (value: string | undefined): number | null => {
@@ -113,74 +80,36 @@ const parseStationNumber = (value: string | undefined): number | null => {
 
 const extractStationAuthFromHeaders = (req: express.Request): StationAuthInfo | null => {
   const stationNumber = parseStationNumber(req.header('x-station-number') || undefined);
-  const operatorId = req.header('x-station-id') || undefined;
-  const password = req.header('x-station-password') || undefined;
+  const operatorName = req.header('x-operator-name') || undefined;
 
-  if (!stationNumber || !operatorId || !password) {
+  if (!stationNumber || !operatorName) {
     return null;
   }
 
-  return { stationNumber, operatorId, password };
+  return { stationNumber, operatorName };
 };
 
 const extractStationAuthFromQuery = (req: express.Request): StationAuthInfo | null => {
   const rawStation = req.query.station;
-  const rawOperatorId = req.query.operatorId;
-  const rawPassword = req.query.password;
+  const rawOperatorName = req.query.operatorName;
 
   const stationString = typeof rawStation === 'string' ? rawStation : undefined;
-  const operatorId = typeof rawOperatorId === 'string' ? rawOperatorId : undefined;
-  const password = typeof rawPassword === 'string' ? rawPassword : undefined;
+  const operatorName = typeof rawOperatorName === 'string' ? rawOperatorName : undefined;
   const stationNumber = parseStationNumber(stationString);
 
-  if (!stationNumber || !operatorId || !password) {
+  if (!stationNumber || !operatorName) {
     return null;
   }
 
-  return { stationNumber, operatorId, password };
-};
-
-const isValidStationCredentials = (
-  stationNumber: number,
-  operatorId: string,
-  password: string,
-): boolean => {
-  const credentials = STATION_CREDENTIALS[stationNumber];
-  if (!credentials) {
-    return false;
-  }
-
-  return credentials.operatorId === operatorId && credentials.password === password;
+  return { stationNumber, operatorName };
 };
 
 const isStationAllowed = (stationNumber: number, allowedStations: number[]): boolean => {
   return allowedStations.includes(stationNumber);
 };
 
-const isStationAuthorized = (
-  expectedStationNumber: number,
-  providedStationNumberHeader: string | undefined,
-  providedIdHeader: string | undefined,
-  providedPasswordHeader: string | undefined,
-): boolean => {
-  if (!providedStationNumberHeader || !providedIdHeader || !providedPasswordHeader) {
-    return false;
-  }
-
-  const providedStationNumber = Number(providedStationNumberHeader);
-  if (!Number.isInteger(providedStationNumber)) {
-    return false;
-  }
-
-  if (providedStationNumber !== expectedStationNumber) {
-    return false;
-  }
-
-  return isValidStationCredentials(
-    expectedStationNumber,
-    providedIdHeader,
-    providedPasswordHeader,
-  );
+const isValidStation = (stationNumber: number, expectedStation: number): boolean => {
+  return stationNumber === expectedStation && VALID_STATION_NUMBERS.includes(stationNumber);
 };
 
 const normalizeRegisterPayload = (body: unknown): RegisterPatientPayload | null => {
@@ -241,15 +170,9 @@ const normalizeRegisterPayload = (body: unknown): RegisterPatientPayload | null 
 
 // Station 1: Submit initial form
 app.post('/api/register', (req, res) => {
-  if (
-    !isStationAuthorized(
-      1,
-      req.header('x-station-number') || undefined,
-      req.header('x-station-id') || undefined,
-      req.header('x-station-password') || undefined,
-    )
-  ) {
-    res.status(403).json({ message: 'Unauthorized station credentials for Station 1.' });
+  const auth = extractStationAuthFromHeaders(req);
+  if (!auth || !isValidStation(auth.stationNumber, 1)) {
+    res.status(403).json({ message: 'Station 1 with operator name is required.' });
     return;
   }
 
@@ -305,12 +228,8 @@ app.post('/api/register', (req, res) => {
 // Stations 2-6: Fetch patient by ID
 app.get('/api/patient/:id', (req, res) => {
   const auth = extractStationAuthFromHeaders(req);
-  if (
-    !auth ||
-    !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6]) ||
-    !isValidStationCredentials(auth.stationNumber, auth.operatorId, auth.password)
-  ) {
-    res.status(403).json({ message: 'Unauthorized station credentials for patient access.' });
+  if (!auth || !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6])) {
+    res.status(403).json({ message: 'Valid station (2-6) with operator name is required.' });
     return;
   }
 
@@ -335,16 +254,11 @@ app.put('/api/patient/:id/station/:station', (req, res) => {
   }
 
   const expectedStationNumber = STATION_NUMBER_BY_KEY[station];
-  if (
-    !isStationAuthorized(
-      expectedStationNumber,
-      req.header('x-station-number') || undefined,
-      req.header('x-station-id') || undefined,
-      req.header('x-station-password') || undefined,
-    )
-  ) {
+  const auth = extractStationAuthFromHeaders(req);
+
+  if (!auth || !isValidStation(auth.stationNumber, expectedStationNumber)) {
     res.status(403).json({
-      message: `Unauthorized station credentials for Station ${expectedStationNumber}.`,
+      message: `Station ${expectedStationNumber} with operator name is required.`,
     });
     return;
   }
@@ -408,18 +322,24 @@ app.get('/api/patients', (_req, res) => {
   res.status(200).json(getAllPatientsLocal());
 });
 
-app.get('/api/patients/today', (req, res) => {
+app.get('/api/patients/today', async (req, res) => {
   const auth = extractStationAuthFromHeaders(req);
-  if (
-    !auth ||
-    !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6]) ||
-    !isValidStationCredentials(auth.stationNumber, auth.operatorId, auth.password)
-  ) {
-    res.status(403).json({ message: 'Unauthorized station credentials for patient list access.' });
+  if (!auth || !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6])) {
+    res.status(403).json({ message: 'Valid station (2-6) with operator name is required.' });
     return;
   }
 
-  res.status(200).json(getPatientsForDate());
+  // Google Sheets is the ground truth - always fetch from there first
+  const sheetRecords = await fetchPatientsFromGoogleSheet();
+  const today = new Date().toISOString().slice(0, 10);
+  const todayRecords = sheetRecords.filter((r) => r.visitDate === today);
+
+  // Save to local DB as backup
+  for (const record of sheetRecords) {
+    savePatientLocal(record);
+  }
+
+  res.status(200).json(todayRecords);
 });
 
 app.get('/api/health', (_req, res) => {
@@ -449,12 +369,8 @@ app.post('/api/sync/pull', async (_req, res) => {
 
 app.get('/api/events', (req, res) => {
   const auth = extractStationAuthFromQuery(req);
-  if (
-    !auth ||
-    !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6]) ||
-    !isValidStationCredentials(auth.stationNumber, auth.operatorId, auth.password)
-  ) {
-    res.status(403).json({ message: 'Unauthorized station credentials for events stream.' });
+  if (!auth || !isStationAllowed(auth.stationNumber, [2, 3, 4, 5, 6])) {
+    res.status(403).json({ message: 'Valid station (2-6) with operator name is required.' });
     return;
   }
 
@@ -480,7 +396,7 @@ app.get('/api/events', (req, res) => {
 app.get('/api/station/auth-check', (req, res) => {
   const auth = extractStationAuthFromHeaders(req);
   if (!auth) {
-    res.status(403).json({ message: 'Station credentials are required.' });
+    res.status(403).json({ message: 'Station number and operator name are required.' });
     return;
   }
 
@@ -489,12 +405,7 @@ app.get('/api/station/auth-check', (req, res) => {
     return;
   }
 
-  if (!isValidStationCredentials(auth.stationNumber, auth.operatorId, auth.password)) {
-    res.status(403).json({ message: 'Invalid station ID or password.' });
-    return;
-  }
-
-  res.status(200).json({ ok: true, station: auth.stationNumber });
+  res.status(200).json({ ok: true, station: auth.stationNumber, operator: auth.operatorName });
 });
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
