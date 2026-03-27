@@ -1,0 +1,65 @@
+services:
+  # Backend API
+  - type: web
+    name: clinic-workflow-backend
+    runtime: node
+    buildCommand: cd backend && npm install && npm run build
+    startCommand: cd backend && npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5001
+      - key: GOOGLE_SHEETS_ID
+        sync: false
+      - key: GOOGLE_SHEETS_TAB
+        value: Patients
+      - key: GOOGLE_USE_ADC
+        value: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_REFRESH_TOKEN
+        sync: false
+      - key: STATION_1_ID
+        sync: false
+      - key: STATION_1_PASSWORD
+        sync: false
+      - key: STATION_2_ID
+        sync: false
+      - key: STATION_2_PASSWORD
+        sync: false
+      - key: STATION_3_ID
+        sync: false
+      - key: STATION_3_PASSWORD
+        sync: false
+      - key: STATION_4_ID
+        sync: false
+      - key: STATION_4_PASSWORD
+        sync: false
+      - key: STATION_5_ID
+        sync: false
+      - key: STATION_5_PASSWORD
+        sync: false
+      - key: STATION_6_ID
+        sync: false
+      - key: STATION_6_PASSWORD
+        sync: false
+    disk:
+      name: clinic-data
+      mountPath: /data
+      sizeGB: 1
+
+  # Frontend (Static Site)
+  - type: web
+    name: clinic-workflow-frontend
+    runtime: static
+    buildCommand: cd frontend/frontend && npm install && npm run build
+    staticPublishPath: frontend/frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: clinic-workflow-backend
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
