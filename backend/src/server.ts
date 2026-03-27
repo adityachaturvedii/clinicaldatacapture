@@ -349,8 +349,8 @@ app.get('/api/patients/today', async (req, res) => {
     return;
   }
 
-  // If cache is empty or stale (>5 seconds), refresh it
-  if (cachedSheetPatients.length === 0 || Date.now() - cacheLastUpdated > 5000) {
+  // If cache is empty or stale (>15 seconds), refresh it
+  if (cachedSheetPatients.length === 0 || Date.now() - cacheLastUpdated > 15000) {
     await refreshSheetCache();
   }
 
@@ -433,7 +433,7 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 
 const PORT = Number(process.env.PORT || 5001);
 
-const GOOGLE_PULL_INTERVAL_MS = Number(process.env.GOOGLE_PULL_INTERVAL_MS || 2000);
+const GOOGLE_PULL_INTERVAL_MS = Number(process.env.GOOGLE_PULL_INTERVAL_MS || 10000);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
