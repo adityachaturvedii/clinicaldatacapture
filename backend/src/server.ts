@@ -11,18 +11,18 @@ import {
   markPatientSynced,
   savePatientLocal,
   updateStationData,
-} from './db';
+} from './db.js';
 import {
   RegisterPatientPayload,
   StationKey,
   StationPayloadMap,
-} from './shared-types';
+} from './shared-types.js';
 import {
   fetchPatientsFromGoogleSheet,
   getGoogleSheetsConfigStatus,
   syncPatientToGoogleSheet,
   syncPendingPatientsToGoogleSheets,
-} from './googleSheets';
+} from './googleSheets.js';
 
 const app = express();
 app.use(cors());
