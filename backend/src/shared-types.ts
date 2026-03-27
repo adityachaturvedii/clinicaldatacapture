@@ -55,11 +55,17 @@ export interface PatientRecord {
   religion: string;
   maritalStatus: string;
   familyType: string;
+  registeredBy?: string; // Operator who registered the patient at Station 1
   fibroscan?: FibroscanData;
+  fibroscanBy?: string; // Operator who filled Station 2
   bca?: BcaData;
+  bcaBy?: string; // Operator who filled Station 3
   video?: VideoData;
+  videoBy?: string; // Operator who filled Station 4
   retinal?: RetinalData;
+  retinalBy?: string; // Operator who filled Station 5
   blood?: BloodData;
+  bloodBy?: string; // Operator who filled Station 6
   createdAt: string;
   updatedAt: string;
   syncedAt?: string;

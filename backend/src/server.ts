@@ -188,7 +188,7 @@ app.post('/api/register', async (req, res) => {
 
   let patient;
   try {
-    patient = buildNewPatientRecord(payload);
+    patient = buildNewPatientRecord(payload, auth.operatorName);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unable to register patient.';
     if (message.includes('Daily capacity reached')) {
@@ -270,7 +270,7 @@ app.put('/api/patient/:id/station/:station', (req, res) => {
     return;
   }
 
-  const updated = updateStationData(id, station, payload);
+  const updated = updateStationData(id, station, payload, auth.operatorName);
   if (!updated) {
     res.status(404).json({ message: 'Patient not found for today.' });
     return;

@@ -104,7 +104,7 @@ export const getDailyIdStatus = (visitDate = todayDateString()) => {
   };
 };
 
-export const buildNewPatientRecord = (payload: RegisterPatientPayload): PatientRecord => {
+export const buildNewPatientRecord = (payload: RegisterPatientPayload, registeredBy?: string): PatientRecord => {
   const now = new Date().toISOString();
   const visitDate = todayDateString();
 
@@ -120,6 +120,7 @@ export const buildNewPatientRecord = (payload: RegisterPatientPayload): PatientR
     religion: payload.religion.trim(),
     maritalStatus: payload.maritalStatus.trim(),
     familyType: payload.familyType.trim(),
+    registeredBy,
     createdAt: now,
     updatedAt: now,
   };
@@ -194,15 +195,20 @@ export const updateStationData = <K extends StationKey>(
   tempId: string,
   station: K,
   payload: StationPayloadMap[K],
+  operatorName?: string,
 ): PatientRecord | null => {
   const patient = getPatientById(tempId);
   if (!patient) {
     return null;
   }
 
+  // Map station key to the "By" field name
+  const operatorField = `${station}By` as keyof PatientRecord;
+
   const updated: PatientRecord = {
     ...patient,
     [station]: payload,
+    [operatorField]: operatorName,
     updatedAt: new Date().toISOString(),
     syncedAt: undefined,
   };

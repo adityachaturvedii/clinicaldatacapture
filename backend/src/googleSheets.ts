@@ -17,13 +17,13 @@ const TAB_HEADERS: Record<string, string[]> = {
 	patients: [
 		'TempID', 'VisitDate', 'Name', 'Age', 'Gender', 'Phone',
 		'Occupation', 'Education', 'Religion', 'MaritalStatus', 'FamilyType',
-		'CreatedAt', 'UpdatedAt'
+		'RegisteredBy', 'CreatedAt', 'UpdatedAt'
 	],
-	fibroscan: ['TempID', 'VisitDate', 'Name', 'LSM', 'CAP', 'Notes', 'UpdatedAt'],
-	bca: ['TempID', 'VisitDate', 'Name', 'Result', 'Notes', 'UpdatedAt'],
-	video: ['TempID', 'VisitDate', 'Name', 'Status', 'Notes', 'UpdatedAt'],
-	retinal: ['TempID', 'VisitDate', 'Name', 'Result', 'Notes', 'UpdatedAt'],
-	blood: ['TempID', 'VisitDate', 'Name', 'SampleCollected', 'Notes', 'UpdatedAt'],
+	fibroscan: ['TempID', 'VisitDate', 'Name', 'LSM', 'CAP', 'Notes', 'FilledBy', 'UpdatedAt'],
+	bca: ['TempID', 'VisitDate', 'Name', 'Result', 'Notes', 'FilledBy', 'UpdatedAt'],
+	video: ['TempID', 'VisitDate', 'Name', 'Status', 'Notes', 'FilledBy', 'UpdatedAt'],
+	retinal: ['TempID', 'VisitDate', 'Name', 'Result', 'Notes', 'FilledBy', 'UpdatedAt'],
+	blood: ['TempID', 'VisitDate', 'Name', 'SampleCollected', 'Notes', 'FilledBy', 'UpdatedAt'],
 };
 
 const getGoogleEnv = () => {
@@ -201,6 +201,7 @@ const patientToRegistrationRow = (patient: PatientRecord): string[] => {
 		patient.religion,
 		patient.maritalStatus,
 		patient.familyType,
+		patient.registeredBy || '',
 		patient.createdAt,
 		patient.updatedAt,
 	];
@@ -221,6 +222,7 @@ const stationDataToRow = (
 				String(patient.fibroscan.lsm || ''),
 				String(patient.fibroscan.cap || ''),
 				patient.fibroscan.notes || '',
+				patient.fibroscanBy || '',
 				timestamp
 			];
 		case 'bca':
@@ -228,6 +230,7 @@ const stationDataToRow = (
 			return [...baseInfo,
 				patient.bca.result || '',
 				patient.bca.notes || '',
+				patient.bcaBy || '',
 				timestamp
 			];
 		case 'video':
@@ -235,6 +238,7 @@ const stationDataToRow = (
 			return [...baseInfo,
 				patient.video.status || '',
 				patient.video.notes || '',
+				patient.videoBy || '',
 				timestamp
 			];
 		case 'retinal':
@@ -242,6 +246,7 @@ const stationDataToRow = (
 			return [...baseInfo,
 				patient.retinal.result || '',
 				patient.retinal.notes || '',
+				patient.retinalBy || '',
 				timestamp
 			];
 		case 'blood':
@@ -249,6 +254,7 @@ const stationDataToRow = (
 			return [...baseInfo,
 				patient.blood.sampleCollected ? 'Yes' : 'No',
 				patient.blood.notes || '',
+				patient.bloodBy || '',
 				timestamp
 			];
 		default:
