@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { google } from 'googleapis';
-import { PatientRecord } from '../../shared-types';
+import { PatientRecord } from './shared-types';
 
 const getGoogleEnv = () => {
 	return {

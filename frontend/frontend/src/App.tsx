@@ -4,7 +4,7 @@ import {
   RegisterPatientPayload,
   StationKey,
   StationPayloadMap,
-} from '../../../shared-types';
+} from './shared-types';
 import {
   fetchTodayPatients,
   fetchPatientById,
@@ -13,8 +13,8 @@ import {
   verifyStationAccess,
   updateStation,
 } from './api';
-import backgroundImage from '../../../pictures/ILBS.jpg';
-import logoImage from '../../../pictures/bg.png';
+import backgroundImage from './pictures/ILBS.jpg';
+import logoImage from './pictures/bg.png';
 import './App.css';
 
 type IncomingPatientOption = {

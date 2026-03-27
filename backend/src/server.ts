@@ -16,7 +16,7 @@ import {
   RegisterPatientPayload,
   StationKey,
   StationPayloadMap,
-} from '../../shared-types';
+} from './shared-types';
 import {
   fetchPatientsFromGoogleSheet,
   getGoogleSheetsConfigStatus,

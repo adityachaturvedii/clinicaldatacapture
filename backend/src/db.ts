@@ -7,7 +7,7 @@ import {
   RegisterPatientPayload,
   StationKey,
   StationPayloadMap,
-} from '../../shared-types';
+} from './shared-types';
 
 const currentFilePath = fileURLToPath(import.meta.url);
 const currentDir = dirname(currentFilePath);

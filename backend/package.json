@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/server.ts",
-    "start": "node --enable-source-maps dist/backend/src/server.js",
+    "start": "node --enable-source-maps dist/server.js",
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
